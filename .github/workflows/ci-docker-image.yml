@@ -21,5 +21,6 @@ jobs:
         uses: docker/build-push-action@v4
         with:
           context: ./backend
+          file: ./backend/Dockerfile
           push: true
           tags: dodyharianto/ai-recruiter-app:latest
