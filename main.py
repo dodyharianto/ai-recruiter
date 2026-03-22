@@ -45,9 +45,20 @@ USE_DATABASE = os.getenv("USE_DATABASE", "true").lower() != "false"
 
 allow_all_origins = os.getenv("ENVIRONMENT") != "production"
 
+
+def _cors_allowed_origins() -> List[str]:
+    """Production: set ALLOWED_ORIGINS to comma-separated HTTPS origins (e.g. Amplify app URL)."""
+    raw = (os.getenv("ALLOWED_ORIGINS") or "").strip()
+    if raw:
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    if allow_all_origins:
+        return ["*"]
+    return ["http://localhost:3000", "http://localhost:3001"]
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if allow_all_origins else ["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_cors_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

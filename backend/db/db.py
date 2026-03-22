@@ -11,9 +11,10 @@ load_dotenv(_project_root / ".env")
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 
+_sqlite = DATABASE_URL.strip().lower().startswith("sqlite")
 engine = create_engine(
-    DATABASE_URL, 
-    connect_args={"check_same_thread": False},
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if _sqlite else {},
     echo=False,  # Set to True for SQL debug logging
 )
 
