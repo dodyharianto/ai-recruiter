@@ -6,6 +6,9 @@ from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
 
+from backend.openai_env import openai_api_key_for_clients
+from backend.agents.crew_compat import task_output_to_str
+
 load_dotenv()
 
 
@@ -14,7 +17,7 @@ class OutreachWriterAgent:
         self.llm = ChatOpenAI(
             model_name="gpt-4",
             temperature=0.8,
-            openai_api_key=os.getenv("OPENAI_API_KEY")
+            openai_api_key=openai_api_key_for_clients()
         )
         
         self.agent = Agent(
@@ -95,7 +98,7 @@ class OutreachWriterAgent:
             expected_output="A personalized outreach message as plain text (2-3 paragraphs)"
         )
         
-        result = task.execute()
+        result = task_output_to_str(await task.aexecute_sync())
         return result.strip()
 
     async def generate_recruiter_notes(
@@ -132,6 +135,6 @@ class OutreachWriterAgent:
             agent=self.agent,
             expected_output="2-4 short personalization hints as plain text",
         )
-        result = task.execute()
+        result = task_output_to_str(await task.aexecute_sync())
         return result.strip()
 

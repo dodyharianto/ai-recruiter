@@ -114,37 +114,33 @@ Login and access control use **JWT (JSON Web Tokens)** and **role-based** checks
 
 ### Backend Setup
 
-1. Navigate to backend directory:
-```bash
-cd backend
-```
+1. Navigate to the **project root** (the folder that contains `main.py` and `requirements.txt` — not only `backend/`).
 
 2. Create virtual environment:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
-On Windows you can use `install_fix.bat` or `python install_packages.py` (same dependencies; retry logic for file locks). All features (auth, SQLite, CrewAI, Whisper, etc.) are covered by `requirements.txt`.
 
-4. Create a `.env` file in `backend` (optional but recommended) with at least:
+4. Create a `.env` file in the **project root** (see `.env.example`). At minimum for real AI features:
 ```
 OPENAI_API_KEY=your_key_here
 JWT_SECRET=your-random-secret-for-production
 ```
-Set `JWT_SECRET` in production; the app has a default for development only.
+`JWT_SECRET` is read at startup; use a strong value in production. Without `OPENAI_API_KEY`, the server still starts, but AI endpoints will fail until you set a valid key.
 
-5. Run the backend server:
+5. Run the backend server **from the project root**:
 ```bash
 python main.py
-# Or: uvicorn main:app --reload
+# Or: uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`. On first run, the database and `backend/data` are created if missing. **First time:** open the frontend and use “Create admin account” to create the first user.
+The API will be available at `http://localhost:8000`. SQLite is created as `app.db` in the current working directory (typically the project root); uploaded files live under `backend/data/`. **First time:** open the frontend and use “Create admin account” to create the first user.
 
 ### Frontend Setup
 

@@ -9,6 +9,9 @@ ENV/
 app.db
 *.db
 
+# Local uploads / SQLite under backend (do not commit)
+backend/data/
+
 # IDE
 .vscode/
 .idea/

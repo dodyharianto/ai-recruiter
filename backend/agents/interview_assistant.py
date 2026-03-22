@@ -6,6 +6,9 @@ from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
 
+from backend.openai_env import openai_api_key_for_clients
+from backend.agents.crew_compat import task_output_to_str
+
 load_dotenv()
 
 
@@ -14,7 +17,7 @@ class InterviewAssistantAgent:
         self.llm = ChatOpenAI(
             model_name="gpt-4",
             temperature=0.3,
-            openai_api_key=os.getenv("OPENAI_API_KEY")
+            openai_api_key=openai_api_key_for_clients()
         )
         
         self.agent = Agent(
@@ -97,7 +100,7 @@ class InterviewAssistantAgent:
             expected_output="A JSON object with missing_fields, suggested_questions, behavioral_probes, technical_probes, and fitment_notes arrays"
         )
         
-        result = task.execute()
+        result = task_output_to_str(await task.aexecute_sync())
         
         import json
         try:
@@ -164,7 +167,7 @@ class InterviewAssistantAgent:
             expected_output="A JSON object with summary, key_points, candidate_responses, strengths, concerns, fit_score (0-100), and recommendation (yes/no/maybe)"
         )
         
-        result = task.execute()
+        result = task_output_to_str(await task.aexecute_sync())
         
         import json
         try:

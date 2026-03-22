@@ -6,6 +6,8 @@ from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
 
+from backend.openai_env import openai_api_key_for_clients
+
 load_dotenv()
 
 
@@ -14,7 +16,7 @@ class SimulationAgent:
         self.llm = ChatOpenAI(
             model_name="gpt-4",
             temperature=0.8,
-            openai_api_key=os.getenv("OPENAI_API_KEY")
+            openai_api_key=openai_api_key_for_clients()
         )
         
         self.agent = Agent(
@@ -70,7 +72,7 @@ class SimulationAgent:
             expected_output="A JSON object with subject, body (2-4 sentences), sentiment, and delay_days fields"
         )
         
-        result = task.execute()
+        result = await task.aexecute_sync()
         # CrewAI may return TaskOutput or string; get string content
         if result is None:
             result_str = ""

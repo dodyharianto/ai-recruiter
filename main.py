@@ -7,6 +7,11 @@ from typing import List, Optional, Dict, Any
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load .env from project root before auth_service reads JWT_SECRET at import time.
+load_dotenv(Path(__file__).resolve().parent / ".env")
+
 logger = logging.getLogger(__name__)
 
 from backend.services.auth_service import verify_user_password, get_user_by_id, create_access_token, decode_token, create_user, count_users, list_users, update_user_email
@@ -38,7 +43,6 @@ async def global_exception_handler(request, exc):
 
 USE_DATABASE = os.getenv("USE_DATABASE", "true").lower() != "false"
 
-import os
 allow_all_origins = os.getenv("ENVIRONMENT") != "production"
 
 app.add_middleware(
@@ -82,7 +86,7 @@ if USE_DATABASE:
         legacy_roles = file_storage_legacy.get_all_roles()
         db_roles = file_storage.get_all_roles()
         if legacy_roles and not db_roles:
-            from scripts.migrate_to_db import migrate
+            from backend.scripts.migrate_to_db import migrate
             migrate()
     except Exception as e:
         import logging

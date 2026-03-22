@@ -6,6 +6,9 @@ from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
 
+from backend.openai_env import openai_api_key_for_clients
+from backend.agents.crew_compat import task_output_to_str
+
 load_dotenv()
 
 
@@ -14,7 +17,7 @@ class EmailMonitorAgent:
         self.llm = ChatOpenAI(
             model_name="gpt-4",
             temperature=0.2,
-            openai_api_key=os.getenv("OPENAI_API_KEY")
+            openai_api_key=openai_api_key_for_clients()
         )
         
         self.agent = Agent(
@@ -51,7 +54,7 @@ class EmailMonitorAgent:
             expected_output="A JSON object with sentiment (positive/negative/neutral), intent (interested/not_interested/needs_info), key_points array, and recommended_action"
         )
         
-        result = task.execute()
+        result = task_output_to_str(await task.aexecute_sync())
         
         import json
         try:
