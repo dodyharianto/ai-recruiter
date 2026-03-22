@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { formatExtractedFields } from '../lib/formatExtractedFields';
 import axios from 'axios';
-import { FiUpload, FiMic, FiStop, FiX } from 'react-icons/fi';
+import { FiUpload, FiMic, FiStopCircle, FiX } from 'react-icons/fi';
 
 export default function HRBriefingsPage() {
   const [briefings, setBriefings] = useState<any[]>([]);
@@ -144,7 +144,7 @@ export default function HRBriefingsPage() {
             >
               {isRecording ? (
                 <>
-                  <FiStop className="w-5 h-5" />
+                  <FiStopCircle className="w-5 h-5" />
                   Stop Recording
                 </>
               ) : (

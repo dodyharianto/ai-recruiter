@@ -40,6 +40,7 @@ interface Candidate {
   simulated_email?: {
     content: string;
     sentiment: string;
+    consent_status?: string;
     analysis?: { key_points: string[]; recommended_action: string };
   };
   not_pushing_forward?: boolean;

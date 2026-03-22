@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FiMic, FiStop, FiUpload, FiCheckCircle, FiAlertCircle, FiMessageSquare, FiEdit3, FiSave } from 'react-icons/fi';
+import { FiMic, FiStopCircle, FiUpload, FiCheckCircle, FiAlertCircle, FiMessageSquare, FiEdit3, FiSave } from 'react-icons/fi';
 
 interface InterviewHelperProps {
   roleId: string;
@@ -400,7 +400,7 @@ export default function InterviewHelper({ roleId, candidateId, candidate, jd, br
           >
             {isRecording ? (
               <>
-                <FiStop className="w-5 h-5" />
+                <FiStopCircle className="w-5 h-5" />
                 Stop Recording
               </>
             ) : (
