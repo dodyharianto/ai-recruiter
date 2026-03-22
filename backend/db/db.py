@@ -7,7 +7,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Project root = .../backend/db/db.py -> parents[2]
 _project_root = Path(__file__).resolve().parents[2]
-load_dotenv(_project_root / ".env")
+# override=True: .env wins over pre-set env (systemd/shell may set a stale DATABASE_URL).
+load_dotenv(_project_root / ".env", override=True)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 

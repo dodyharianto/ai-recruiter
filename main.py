@@ -10,9 +10,12 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load .env from project root before auth_service reads JWT_SECRET at import time.
-load_dotenv(Path(__file__).resolve().parent / ".env")
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
 
 logger = logging.getLogger(__name__)
+
+# CrewAI v1+ compat (Task.execute -> execute_sync); import before any agent module.
+import backend.agents.crew_compat  # noqa: F401
 
 from backend.services.auth_service import verify_user_password, get_user_by_id, create_access_token, decode_token, create_user, count_users, list_users, update_user_email
 from backend.agents.jd_parser import JDParserAgent
