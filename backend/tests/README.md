@@ -65,7 +65,7 @@ Expected results (with API key):
 
 ## Run All Tests
     python -m pytest tests/ -v
-
+    
 ---
 
 ## Manual Testing - AI Agent Outputs
@@ -163,3 +163,5 @@ testable components given the constraints of the project.
   critical paths and highest compliance risk areas
 - Full integration and end-to-end testing is recommended
   before production deployment
+
+  ---
