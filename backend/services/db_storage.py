@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
 # Import from parent (backend) so we can run from backend dir
 import sys
 backend_dir = Path(__file__).resolve().parent.parent
@@ -28,7 +26,8 @@ from backend.models.interviews import Interview as InterviewModel
 from backend.models.evaluation_chats import EvaluationChat as EvaluationChatModel
 from backend.models.consent_templates import ConsentTemplate as ConsentTemplateModel
 from backend.services.audio_transcription import resolve_hr_briefing_audio_extension
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import desc
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def _resolve_data_dir() -> Path:
@@ -451,7 +450,11 @@ class DatabaseStorageService:
 
     def get_all_hr_briefings(self) -> List[Dict[str, Any]]:
         with self._get_session() as session:
-            briefings = session.query(HRBriefingModel).all()
+            briefings = (
+                session.query(HRBriefingModel)
+                .order_by(desc(HRBriefingModel.created_at))
+                .all()
+            )
             result = []
             for b in briefings:
                 links = session.query(RoleHRBriefing).filter(RoleHRBriefing.briefing_id == b.id).all()
@@ -501,6 +504,19 @@ class DatabaseStorageService:
             for rid in role_ids:
                 session.add(RoleHRBriefing(role_id=rid, briefing_id=briefing_id))
             session.commit()
+        return True
+
+    def delete_hr_briefing(self, briefing_id: str) -> bool:
+        """Delete briefing row (role links cascade) and optional audio folder on disk."""
+        briefing_dir = self.base_dir / "hr_briefings" / briefing_id
+        with self._get_session() as session:
+            b = session.query(HRBriefingModel).filter(HRBriefingModel.id == briefing_id).first()
+            if not b:
+                return False
+            session.delete(b)
+            session.commit()
+        if briefing_dir.is_dir():
+            shutil.rmtree(briefing_dir, ignore_errors=True)
         return True
 
     # ---------- Interviews ----------

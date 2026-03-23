@@ -535,6 +535,15 @@ async def update_hr_briefing_roles(briefing_id: str, body: HRBriefingRolesUpdate
     return {"message": "Assigned roles updated", "role_ids": body.role_ids}
 
 
+@app.delete("/api/hr-briefings/{briefing_id}")
+async def delete_hr_briefing(briefing_id: str):
+    """Permanently delete an HR briefing and its stored files."""
+    success = file_storage.delete_hr_briefing(briefing_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Briefing not found")
+    return {"message": "Briefing deleted"}
+
+
 @app.post("/api/roles/{role_id}/candidates/{candidate_id}/interview")
 async def upload_interview(role_id: str, candidate_id: str, file: UploadFile = File(...)):
     """Upload interview audio file"""

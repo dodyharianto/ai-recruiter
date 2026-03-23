@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { formatExtractedFields } from '../lib/formatExtractedFields';
 import axios from '../lib/axios';
 import { getApiErrorMessage } from '../lib/apiErrorMessage';
-import { FiUpload, FiMic, FiStopCircle, FiX } from 'react-icons/fi';
+import { FiUpload, FiMic, FiStopCircle, FiX, FiTrash2 } from 'react-icons/fi';
 
 export default function HRBriefingsPage() {
   const [briefings, setBriefings] = useState<any[]>([]);
@@ -53,6 +53,23 @@ export default function HRBriefingsPage() {
     const currentIds = briefing.role_ids ?? [];
     if (currentIds.includes(roleId)) return;
     updateBriefingRoles(briefing.id, [...currentIds, roleId]);
+  };
+
+  const handleDeleteBriefing = async (briefingId: string) => {
+    if (
+      !window.confirm(
+        'Delete this briefing permanently? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/hr-briefings/${briefingId}`);
+      fetchBriefings();
+    } catch (error: unknown) {
+      console.error('Error deleting briefing:', error);
+      alert(`Failed to delete briefing: ${getApiErrorMessage(error)}`);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,13 +190,24 @@ export default function HRBriefingsPage() {
           ) : (
             briefings.map((briefing) => (
               <div key={briefing.id} className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start gap-4 mb-4">
                   <div>
                     <h3 className="text-lg font-semibold">Briefing #{briefing.id.slice(0, 8)}</h3>
                     <p className="text-sm text-gray-500">
-                      {new Date(briefing.created_at).toLocaleString()}
+                      {briefing.created_at
+                        ? new Date(briefing.created_at).toLocaleString()
+                        : '—'}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBriefing(briefing.id)}
+                    className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-800 border border-red-200 hover:border-red-300 rounded-lg px-3 py-1.5 shrink-0"
+                    title="Delete briefing"
+                  >
+                    <FiTrash2 className="w-4 h-4" />
+                    Delete
+                  </button>
                 </div>
 
                 <div className="space-y-4">
