@@ -21,7 +21,7 @@ if str(backend_dir) not in sys.path:
 from backend.db.db import get_engine
 from sqlalchemy.orm import sessionmaker
 
-SECRET_KEY = os.getenv("JWT_SECRET", "change-me-in-production-use-env")
+SECRET_KEY = os.getenv("JWT_SECRET") or os.getenv("SECRET_KEY", "change-me-in-production-use-env")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 BCRYPT_MAX_BYTES = 72

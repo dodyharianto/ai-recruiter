@@ -5,11 +5,18 @@ import Link from 'next/link';
 import axios from 'axios';
 import { FiMessageSquare, FiChevronDown, FiChevronUp, FiMove, FiCheck, FiUpload, FiMic, FiMail, FiMinusCircle, FiTrash2 } from 'react-icons/fi';
 
+type CandidateStyleInput = {
+  column?: string;
+  color?: string;
+  sent_to_client?: boolean;
+  not_pushing_forward?: boolean;
+};
+
 interface CandidateCardProps {
   candidate: any;
   roleId: string;
   roleTitle?: string;
-  getColorClass: (color: string) => string;
+  getColorClass: (candidate: CandidateStyleInput) => string;
   onUpdate: () => void;
 }
 

@@ -13,16 +13,21 @@ app.db
 node_modules/
 frontend/node_modules/
 backend/venv/
-.env
 
 # Next.js Build Files
 frontend/.next/
 frontend/out/
 build/
 
+# Local uploads / SQLite under backend (do not commit)
+backend/data/
+
 # IDE
 .vscode/
 .idea/
+
+# Local pip --target scratch (do not commit)
+_crew_stash/
 
 # Python cache
 __pycache__/
@@ -32,3 +37,16 @@ __pycache__/
 
 # Env file
 .env
+
+# Node / Next.js (never commit — Amplify installs fresh)
+node_modules/
+frontend/node_modules/
+frontend/.next/
+.next/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db

@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
+from .audio_transcription import resolve_hr_briefing_audio_extension
+
 
 def _resolve_data_dir() -> Path:
     """Resolve data directory relative to backend package, so it works regardless of cwd."""
@@ -375,20 +377,20 @@ class FileStorageService:
             json.dump(candidate, f, indent=2)
         return candidate
 
-    def save_hr_briefing(self, file) -> Path:
-        """Save HR briefing audio file"""
+    def save_hr_briefing(
+        self, filename: Optional[str], content: bytes, content_type: Optional[str] = None
+    ):
+        """Save HR briefing audio file (bytes from UploadFile.read())."""
         briefing_id = str(uuid.uuid4())
         briefing_dir = self.hr_briefings_dir / briefing_id
         briefing_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Determine file extension
-        ext = Path(file.filename).suffix if file.filename else ".mp3"
+
+        ext = resolve_hr_briefing_audio_extension(filename, content_type, content)
         audio_path = briefing_dir / f"briefing{ext}"
-        
+
         with open(audio_path, "wb") as f:
-            content = file.file.read()
             f.write(content)
-        
+
         return audio_path, briefing_id
     
     def create_hr_briefing(self, briefing_data: Dict[str, Any], role_ids: List[str], briefing_id: str = None) -> str:
@@ -424,7 +426,8 @@ class FileStorageService:
                 if briefing_file.exists():
                     with open(briefing_file, "r") as f:
                         briefings.append(json.load(f))
-        
+
+        briefings.sort(key=lambda x: x.get("created_at") or "", reverse=True)
         return briefings
     
     def get_role_hr_briefing(self, role_id: str) -> Optional[Dict[str, Any]]:
@@ -447,6 +450,14 @@ class FileStorageService:
         data["updated_at"] = datetime.now().isoformat()
         with open(briefing_file, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
+        return True
+
+    def delete_hr_briefing(self, briefing_id: str) -> bool:
+        """Remove briefing folder (JSON + any saved audio)."""
+        briefing_dir = self.hr_briefings_dir / briefing_id
+        if not briefing_dir.is_dir():
+            return False
+        shutil.rmtree(briefing_dir)
         return True
 
     def save_interview_audio(self, role_id: str, candidate_id: str, file) -> Path:

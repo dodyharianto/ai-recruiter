@@ -16,6 +16,21 @@ interface EvaluationChatProps {
   onPersistMessages?: (messages: Message[]) => void;
 }
 
+/** FastAPI may return detail as a string or a list of validation objects { msg?: string }. */
+function formatAxiosDetail(detail: unknown): string | undefined {
+  if (typeof detail === 'string') return detail;
+  if (!Array.isArray(detail)) return undefined;
+  const parts = detail.map((item) => {
+    if (item && typeof item === 'object' && 'msg' in item) {
+      const m = (item as { msg?: unknown }).msg;
+      if (m == null) return '';
+      return typeof m === 'string' ? m : String(m);
+    }
+    return '';
+  }).filter(Boolean);
+  return parts.length ? parts.join('; ') : undefined;
+}
+
 export default function EvaluationChat({ roleId, messages, onMessagesChange, onClearChat, onPersistMessages }: EvaluationChatProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -59,11 +74,10 @@ export default function EvaluationChat({ roleId, messages, onMessagesChange, onC
       // Persist immediately so reply is saved even if user switches tab before state propagates
       onPersistMessages?.(newMessages);
     } catch (error: unknown) {
-      const err = error as { response?: { data?: { detail?: string | unknown[]; response?: string } }; message?: string };
+      const err = error as { response?: { data?: { detail?: unknown; response?: string } }; message?: string };
       console.error('Error evaluating:', err);
       const detail = err.response?.data?.detail;
-      const backendMessage = err.response?.data?.response
-        ?? (typeof detail === 'string' ? detail : Array.isArray(detail) ? detail.map((d: { msg?: string }) => d?.msg).filter(Boolean).join('; ') : undefined);
+      const backendMessage = err.response?.data?.response ?? formatAxiosDetail(detail);
       const errorContent = backendMessage
         ? String(backendMessage)
         : err.message?.includes('timeout') || err.message?.includes('Timeout')
@@ -100,7 +114,10 @@ export default function EvaluationChat({ roleId, messages, onMessagesChange, onC
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
             <p>Start a conversation to evaluate candidates</p>
-            <p className="text-sm mt-2">Try asking: "Who is the best fit for this role?"</p>
+            <p className="text-sm mt-2">
+              Try asking:{' '}
+              <span className="whitespace-nowrap">&ldquo;Who is the best fit for this role?&rdquo;</span>
+            </p>
           </div>
         )}
 
