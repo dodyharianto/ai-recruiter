@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { formatExtractedFields } from '../lib/formatExtractedFields';
-import axios from 'axios';
-import { FiUpload, FiMic, FiStop, FiX } from 'react-icons/fi';
+import axios from '../lib/axios';
+import { getApiErrorMessage } from '../lib/apiErrorMessage';
+import { FiUpload, FiMic, FiStopCircle, FiX, FiTrash2 } from 'react-icons/fi';
 
 export default function HRBriefingsPage() {
   const [briefings, setBriefings] = useState<any[]>([]);
@@ -54,6 +55,23 @@ export default function HRBriefingsPage() {
     updateBriefingRoles(briefing.id, [...currentIds, roleId]);
   };
 
+  const handleDeleteBriefing = async (briefingId: string) => {
+    if (
+      !window.confirm(
+        'Delete this briefing permanently? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/hr-briefings/${briefingId}`);
+      fetchBriefings();
+    } catch (error: unknown) {
+      console.error('Error deleting briefing:', error);
+      alert(`Failed to delete briefing: ${getApiErrorMessage(error)}`);
+    }
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -64,14 +82,14 @@ export default function HRBriefingsPage() {
     formData.append('role_ids', selectedRoles.join(','));
 
     try {
-      await axios.post('/api/hr-briefings', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      // Do not set Content-Type manually — axios must add the multipart boundary.
+      // Transcription + CrewAI often exceeds the default 30s axios timeout.
+      await axios.post('/api/hr-briefings', formData, { timeout: 300000 });
       fetchBriefings();
       setSelectedRoles([]);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error uploading briefing:', error);
-      alert('Failed to upload HR briefing');
+      alert(`Failed to upload HR briefing: ${getApiErrorMessage(error)}`);
     } finally {
       setIsUploading(false);
     }
@@ -120,13 +138,13 @@ export default function HRBriefingsPage() {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-wrap gap-4 items-center">
             <label className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 cursor-pointer">
               <FiUpload className="w-5 h-5" />
               {isUploading ? 'Uploading...' : 'Upload Audio File'}
               <input
                 type="file"
-                accept="audio/*"
+                accept=".mp3,.wav,.m4a,.webm,.ogg,.oga,.flac,.mp4,.mpeg,.mpga,audio/mpeg,audio/mp4,audio/webm,audio/wav"
                 onChange={handleFileUpload}
                 className="hidden"
                 disabled={isUploading}
@@ -144,7 +162,7 @@ export default function HRBriefingsPage() {
             >
               {isRecording ? (
                 <>
-                  <FiStop className="w-5 h-5" />
+                  <FiStopCircle className="w-5 h-5" />
                   Stop Recording
                 </>
               ) : (
@@ -155,6 +173,11 @@ export default function HRBriefingsPage() {
               )}
             </button>
           </div>
+          <p className="text-xs text-gray-500 mt-3 max-w-3xl">
+            Best: mp3, wav, m4a, webm, or ogg. Formats like aac or some phone voice memos need{' '}
+            <code className="bg-gray-100 px-1 rounded">ffmpeg</code> on the API server for auto-conversion, or convert
+            the file locally first.
+          </p>
         </div>
 
         <div className="space-y-4">
@@ -167,13 +190,24 @@ export default function HRBriefingsPage() {
           ) : (
             briefings.map((briefing) => (
               <div key={briefing.id} className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-start gap-4 mb-4">
                   <div>
                     <h3 className="text-lg font-semibold">Briefing #{briefing.id.slice(0, 8)}</h3>
                     <p className="text-sm text-gray-500">
-                      {new Date(briefing.created_at).toLocaleString()}
+                      {briefing.created_at
+                        ? new Date(briefing.created_at).toLocaleString()
+                        : '—'}
                     </p>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBriefing(briefing.id)}
+                    className="flex items-center gap-1.5 text-sm text-red-600 hover:text-red-800 border border-red-200 hover:border-red-300 rounded-lg px-3 py-1.5 shrink-0"
+                    title="Delete briefing"
+                  >
+                    <FiTrash2 className="w-4 h-4" />
+                    Delete
+                  </button>
                 </div>
 
                 <div className="space-y-4">

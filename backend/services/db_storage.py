@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 
-from sqlalchemy.orm import Session
-
 # Import from parent (backend) so we can run from backend dir
 import sys
 backend_dir = Path(__file__).resolve().parent.parent
@@ -27,7 +25,9 @@ from backend.models.role_hr_briefings import RoleHRBriefing
 from backend.models.interviews import Interview as InterviewModel
 from backend.models.evaluation_chats import EvaluationChat as EvaluationChatModel
 from backend.models.consent_templates import ConsentTemplate as ConsentTemplateModel
-from sqlalchemy.orm import sessionmaker
+from backend.services.audio_transcription import resolve_hr_briefing_audio_extension
+from sqlalchemy import desc
+from sqlalchemy.orm import Session, sessionmaker
 
 
 def _resolve_data_dir() -> Path:
@@ -293,8 +293,8 @@ class DatabaseStorageService:
     def _candidate_to_dict(self, c: CandidateModel) -> Dict[str, Any]:
         return {
             "id": c.id,
-            "name": c.name,
-            "summary": c.summary,
+            "name": c.name or "",
+            "summary": c.summary or "",
             "skills": _json_loads(c.skills, []),
             "experience": c.experience or "",
             "parsed_insights": _json_loads(c.parsed_insights, {}),
@@ -418,14 +418,16 @@ class DatabaseStorageService:
         return self.get_candidate(role_id, candidate_id)
 
     # ---------- HR Briefings ----------
-    def save_hr_briefing(self, file) -> tuple:
+    def save_hr_briefing(
+        self, filename: Optional[str], content: bytes, content_type: Optional[str] = None
+    ) -> tuple:
         briefing_id = str(uuid.uuid4())
         briefings_dir = self.base_dir / "hr_briefings" / briefing_id
         briefings_dir.mkdir(parents=True, exist_ok=True)
-        ext = Path(file.filename).suffix if file.filename else ".mp3"
+        ext = resolve_hr_briefing_audio_extension(filename, content_type, content)
         audio_path = briefings_dir / f"briefing{ext}"
         with open(audio_path, "wb") as f:
-            f.write(file.file.read())
+            f.write(content)
         return audio_path, briefing_id
 
     def create_hr_briefing(self, briefing_data: Dict[str, Any], role_ids: List[str], briefing_id: str = None) -> str:
@@ -448,7 +450,11 @@ class DatabaseStorageService:
 
     def get_all_hr_briefings(self) -> List[Dict[str, Any]]:
         with self._get_session() as session:
-            briefings = session.query(HRBriefingModel).all()
+            briefings = (
+                session.query(HRBriefingModel)
+                .order_by(desc(HRBriefingModel.created_at))
+                .all()
+            )
             result = []
             for b in briefings:
                 links = session.query(RoleHRBriefing).filter(RoleHRBriefing.briefing_id == b.id).all()
@@ -498,6 +504,19 @@ class DatabaseStorageService:
             for rid in role_ids:
                 session.add(RoleHRBriefing(role_id=rid, briefing_id=briefing_id))
             session.commit()
+        return True
+
+    def delete_hr_briefing(self, briefing_id: str) -> bool:
+        """Delete briefing row (role links cascade) and optional audio folder on disk."""
+        briefing_dir = self.base_dir / "hr_briefings" / briefing_id
+        with self._get_session() as session:
+            b = session.query(HRBriefingModel).filter(HRBriefingModel.id == briefing_id).first()
+            if not b:
+                return False
+            session.delete(b)
+            session.commit()
+        if briefing_dir.is_dir():
+            shutil.rmtree(briefing_dir, ignore_errors=True)
         return True
 
     # ---------- Interviews ----------

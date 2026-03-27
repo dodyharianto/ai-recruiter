@@ -6,6 +6,9 @@ from langchain_openai import ChatOpenAI
 import os
 from dotenv import load_dotenv
 
+from backend.openai_env import openai_api_key_for_clients
+from backend.agents.crew_compat import run_crew_task_async, task_output_to_str
+
 load_dotenv()
 
 
@@ -14,7 +17,7 @@ class EvaluationAgent:
         self.llm = ChatOpenAI(
             model_name="gpt-4",
             temperature=0.4,
-            openai_api_key=os.getenv("OPENAI_API_KEY")
+            openai_api_key=openai_api_key_for_clients()
         )
         
         self.agent = Agent(
@@ -214,6 +217,6 @@ class EvaluationAgent:
             expected_output="A detailed, specific answer that references actual candidate names, skills, and qualifications from the provided data"
         )
         
-        result = task.execute()
+        result = task_output_to_str(await run_crew_task_async(task))
         return result.strip()
 

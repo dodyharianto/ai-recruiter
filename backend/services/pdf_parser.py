@@ -16,8 +16,8 @@ would be required for those cases.
 Authors : Modern Software Solutions — IS631 Group Project
 Version : 1.0.0
 """
-
 import PyPDF2
+from pypdf import PdfReader
 from pathlib import Path
 
 
@@ -60,8 +60,7 @@ class PDFParserService:
         try:
             # Open in binary mode ("rb") — required by PyPDF2 for all platforms
             with open(pdf_path, "rb") as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-
+                pdf_reader = PdfReader(file)
                 text = ""
                 # Iterate through every page and accumulate extracted text.
                 # A newline is appended after each page to preserve separation.

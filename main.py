@@ -1,5 +1,5 @@
 import logging
-from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Request
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Body, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -7,7 +7,15 @@ from typing import List, Optional, Dict, Any
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+# Load .env from project root before auth_service reads JWT_SECRET at import time.
+load_dotenv(Path(__file__).resolve().parent / ".env", override=True)
+
 logger = logging.getLogger(__name__)
+
+# CrewAI v1+ compat (Task.execute -> execute_sync); import before any agent module.
+import backend.agents.crew_compat  # noqa: F401
 
 from backend.services.auth_service import verify_user_password, get_user_by_id, create_access_token, decode_token, create_user, count_users, list_users, update_user_email
 from backend.agents.jd_parser import JDParserAgent
@@ -38,12 +46,22 @@ async def global_exception_handler(request, exc):
 
 USE_DATABASE = os.getenv("USE_DATABASE", "true").lower() != "false"
 
-import os
 allow_all_origins = os.getenv("ENVIRONMENT") != "production"
+
+
+def _cors_allowed_origins() -> List[str]:
+    """Production: set ALLOWED_ORIGINS to comma-separated HTTPS origins (e.g. Amplify app URL)."""
+    raw = (os.getenv("ALLOWED_ORIGINS") or "").strip()
+    if raw:
+        return [o.strip() for o in raw.split(",") if o.strip()]
+    if allow_all_origins:
+        return ["*"]
+    return ["http://localhost:3000", "http://localhost:3001"]
+
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if allow_all_origins else ["http://localhost:3000", "http://localhost:3001"],
+    allow_origins=_cors_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -82,7 +100,7 @@ if USE_DATABASE:
         legacy_roles = file_storage_legacy.get_all_roles()
         db_roles = file_storage.get_all_roles()
         if legacy_roles and not db_roles:
-            from scripts.migrate_to_db import migrate
+            from backend.scripts.migrate_to_db import migrate
             migrate()
     except Exception as e:
         import logging
@@ -458,24 +476,35 @@ async def delete_candidate(role_id: str, candidate_id: str):
 
 
 @app.post("/api/hr-briefings")
-async def upload_hr_briefing(file: UploadFile = File(...), role_ids: str = None):
+async def upload_hr_briefing(
+    file: UploadFile = File(...),
+    role_ids: Optional[str] = Form(None),
+):
     """Upload HR briefing audio file"""
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Empty audio upload")
+    role_id_list = (
+        [r.strip() for r in role_ids.split(",") if r.strip()] if role_ids else []
+    )
     # Save file (returns tuple: file_path, briefing_id)
-    file_path, briefing_id = file_storage.save_hr_briefing(file)
-    
+    file_path, briefing_id = file_storage.save_hr_briefing(
+        file.filename, content, file.content_type
+    )
+
     # Transcribe audio (use async version)
     transcription = await audio_transcription.transcribe_async(file_path)
-    
+
     # Use HR Briefing Agent
     briefing_data = await hr_briefing_agent.process_briefing(transcription)
-    
+
     # Save briefing (reuse the briefing_id from file save)
     briefing_id = file_storage.create_hr_briefing(
-        briefing_data, 
-        role_ids.split(',') if role_ids else [],
-        briefing_id=briefing_id
+        briefing_data,
+        role_id_list,
+        briefing_id=briefing_id,
     )
-    
+
     return {"message": "HR briefing processed successfully", "briefing_id": briefing_id, "briefing": briefing_data}
 
 
@@ -504,6 +533,15 @@ async def update_hr_briefing_roles(briefing_id: str, body: HRBriefingRolesUpdate
     if not success:
         raise HTTPException(status_code=404, detail="Briefing not found")
     return {"message": "Assigned roles updated", "role_ids": body.role_ids}
+
+
+@app.delete("/api/hr-briefings/{briefing_id}")
+async def delete_hr_briefing(briefing_id: str):
+    """Permanently delete an HR briefing and its stored files."""
+    success = file_storage.delete_hr_briefing(briefing_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Briefing not found")
+    return {"message": "Briefing deleted"}
 
 
 @app.post("/api/roles/{role_id}/candidates/{candidate_id}/interview")
@@ -731,8 +769,16 @@ async def simulate_consent_reply(role_id: str, candidate_id: str, params: Dict[s
     else:
         reply_content = f"Hi,\n\nI DO NOT CONSENT. Thank you for your time.\n\nBest regards,\n{candidate.get('name', 'Candidate')}"
         response_text = "I DO NOT CONSENT"
-        
-    analysis = await email_monitor.analyze_email(reply_content, candidate.get("name"))
+
+    try:
+        analysis = await email_monitor.analyze_email(reply_content, candidate.get("name"))
+    except Exception:
+        analysis = {
+            "sentiment": "positive" if consent_status == "consented" else "negative",
+            "intent": "interested" if consent_status == "consented" else "not_interested",
+            "key_points": [],
+            "recommended_action": "Record consent" if consent_status == "consented" else "Close candidate",
+        }
     reply_data = {
         "content": reply_content,
         "sentiment": analysis.get("sentiment", "positive" if consent_status == "consented" else "neutral"),
