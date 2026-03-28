@@ -706,7 +706,7 @@ async def clear_evaluation_chat(role_id: str):
     return {"message": "Chat cleared"}
 
 
-@app.post("/api/consents/generate")
+@app.post("/api/consents/generation")
 async def generate_consent(consent_params: Dict[str, Any]):
     """Generate consent form"""
     consent_form = await consent_engine.generate_consent(consent_params)
