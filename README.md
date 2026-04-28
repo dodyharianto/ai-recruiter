@@ -2,6 +2,9 @@
 
 A comprehensive recruiting web application powered by CrewAI agents and OpenAI, designed to streamline the entire recruitment workflow.
 
+<img width="1339" height="744" alt="image" src="https://github.com/user-attachments/assets/eb47c59b-449b-422e-8175-9cae512004fc" />
+<br>
+
 **Quick links:** [Setup](#setup) · [Authentication](#authentication) · [API Endpoints](#api-endpoints) · [Deployment](DEPLOYMENT.md) · [Troubleshooting](TROUBLESHOOTING.md) · [AI Agents](AGENTS_SUMMARY.md)
 
 ## Prerequisites
